@@ -7,8 +7,9 @@ import me.qmx.jitescript.JiteClass;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 import static me.qmx.jitescript.util.CodegenUtils.*;
 
@@ -33,32 +34,53 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Prototype generate(final Prototype base, final String... modifications) {
-        final String[] baseProps = base.properties();
+    public static Class generate(String... baseProps) {
+        return generate(new String[0], baseProps);
+    }
+
+    public static Class generate(String[] baseProps, final String... modifications) {
         String[] newProps;
         if (baseProps.length == 0) {
+            if (modifications.length == 0) {
+                return Prototype.class;
+            }
             newProps = modifications;
         } else {
-            List<String> combined = Arrays.asList(baseProps);
+            Set<String> combined = new HashSet<String>();
+            combined.addAll(Arrays.asList(baseProps));
             combined.addAll(Arrays.asList(modifications));
             newProps = combined.toArray(new String[combined.size()]);
         }
+
         Arrays.sort(newProps);
-        final String hash = getHashForStrings(newProps);
-        
-        // look for existing prototype
-        Class p = prototypes.getIfPresent(hash);
+        Class p = protoClassFromProps(newProps);
 
         try {
             if (p == null) {
                 // create a new one
+                Class _base = protoClassFromProps(newProps);
+                if (_base == null) {
+                    if (modifications.length != 0) {
+                        // recurse and generate the base first
+                        _base = generate(baseProps);
+                    } else {
+                        // all modifications, use Prototype as base
+                        _base = Prototype.class;
+                    }
+                }
+                final Class base = _base;
+                final String hash = hashFromStrings(newProps);
                 final String[] newFields = newProps;
-                JiteClass jiteClass = new JiteClass(hash, p(base.getClass()), new String[0]) {{
+                
+                JiteClass jiteClass = new JiteClass(hash, p(base), new String[0]) {{
+                    // no-arg constructor for empty instance
+                    defineDefaultConstructor();
+
                     // parent class constructor
-                    defineMethod("<init>", ACC_PUBLIC, sig(void.class, base.getClass()), new CodeBlock() {{
+                    defineMethod("<init>", ACC_PUBLIC, sig(void.class, base), new CodeBlock() {{
                         aload(0);
                         aload(1);
-                        invokespecial(p(base.getClass()), "<init>", sig(void.class, base.getClass()));
+                        invokespecial(p(base), "<init>", sig(void.class, base));
                         voidreturn();
                     }});
 
@@ -66,13 +88,47 @@ public class PrototypeGenerator {
                     defineMethod("<init>", ACC_PUBLIC, sig(void.class, "L" + hash + ";"), new CodeBlock() {{
                         aload(0);
                         aload(1);
-                        invokespecial(p(base.getClass()), "<init>", sig(void.class, base.getClass()));
+                        invokespecial(p(base), "<init>", sig(void.class, base));
 
                         for (String prop : modifications) {
                             aload(0);
                             aload(1);
                             getfield(hash, prop, ci(Object.class));
                             putfield(hash, prop, ci(Object.class));
+                        }
+
+                        voidreturn();
+                    }});
+
+                    // in-order values array constructor
+                    defineMethod("<init>", ACC_PUBLIC, sig(void.class, Object[].class), new CodeBlock() {{
+                        aload(0);
+                        invokespecial(p(base), "<init>", sig(void.class));
+
+                        int i = 0;
+                        for (String prop : newFields) {
+                            aload(0);
+                            aload(1);
+                            pushInt(i);
+                            aaload();
+                            putfield(hash, prop, ci(Object.class));
+                            i++;
+                        }
+
+                        voidreturn();
+                    }});
+
+                    // in-order values arguments constructor
+                    defineMethod("<init>", ACC_PUBLIC, sig(void.class, params(Object.class, newFields.length)), new CodeBlock() {{
+                        aload(0);
+                        invokespecial(p(base), "<init>", sig(void.class));
+
+                        int i = 0;
+                        for (String prop : newFields) {
+                            aload(0);
+                            aload(i + 1);
+                            putfield(hash, prop, ci(Object.class));
+                            i++;
                         }
 
                         voidreturn();
@@ -101,13 +157,63 @@ public class PrototypeGenerator {
                 prototypes.put(hash, p);
             }
 
-            return (Prototype)p.getConstructor(base.getClass()).newInstance(base);
+            return p;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static String getHashForStrings(String[] strings) {
+    public static Prototype construct(String[] keys, Object[] values) {
+        try {
+            Class p = generate(keys);
+            return (Prototype)p.getConstructor(Object[].class).newInstance((Object)values);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Prototype construct(Prototype base, String... modifications) {
+        try {
+            Class p = generate(base.properties(), modifications);
+            return (Prototype)p.getConstructor(params(base.getClass())).newInstance(base);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Prototype construct(String key0, Object value0) {
+        try {
+            Class p = protoClassFromProps(key0);
+            return (Prototype)p.getConstructor(params(Object.class, 1)).newInstance(value0);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Prototype construct(String key0, String key1, Object value0, Object value1) {
+        try {
+            Class p = generate(key0, key1);
+            return (Prototype)p.getConstructor(params(Object.class, 2)).newInstance(value0, value1);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Prototype construct(String key0, String key1, String key2, Object value0, Object value1, Object value2) {
+        try {
+            Class p = generate(key0, key1, key2);
+            return (Prototype)p.getConstructor(params(Object.class, 3)).newInstance(value0, value1, value2);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Class protoClassFromProps(String... newProps) {
+        final String hash = hashFromStrings(newProps);
+        return prototypes.getIfPresent(hash);
+    }
+
+    public static String hashFromStrings(String... strings) {
         MessageDigest sha1 = sha1();
         sha1.update(Arrays.toString(strings).getBytes());
         byte[] digest = sha1.digest();
