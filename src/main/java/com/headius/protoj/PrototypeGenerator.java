@@ -1,19 +1,19 @@
 package com.headius.protoj;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import me.qmx.jitescript.CodeBlock;
 import me.qmx.jitescript.JiteClass;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import static me.qmx.jitescript.util.CodegenUtils.*;
 
 public class PrototypeGenerator {
-    private static final Map<String, Class> prototypes = new HashMap<String, Class>();
+    private static final Cache<String, Class> prototypes = CacheBuilder.newBuilder().weakValues().build();
     private static final MessageDigest SHA1;
     static {
         MessageDigest sha1 = null;
@@ -47,7 +47,7 @@ public class PrototypeGenerator {
         final String hash = getHashForStrings(newProps);
         
         // look for existing prototype
-        Class p = prototypes.get(hash);
+        Class p = prototypes.getIfPresent(hash);
 
         try {
             if (p == null) {
