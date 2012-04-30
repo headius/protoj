@@ -1,7 +1,5 @@
 package com.headius.protoj;
 
-import org.junit.Before;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
@@ -11,13 +9,7 @@ import static org.junit.Assert.assertEquals;
 
 public class PrototypeGeneratorTest {
 
-    private PrototypeGenerator prototypeGenerator;
-
-    @Before
-    public void setUp() throws Exception {
-        PrototypeGenerator.DynamicClassLoader classLoader = new PrototypeGenerator.DynamicClassLoader();
-        this.prototypeGenerator = new PrototypeGenerator(classLoader);
-    }
+    private static PrototypeGenerator prototypeGenerator = new PrototypeGenerator(new PrototypeGenerator.DynamicClassLoader());
 
     @org.junit.Test
     public void testConstructFromBase() throws Throwable {
