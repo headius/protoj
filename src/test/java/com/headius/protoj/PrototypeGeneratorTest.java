@@ -8,11 +8,14 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class PrototypeGeneratorTest {
+
+    private static PrototypeGenerator prototypeGenerator = new PrototypeGenerator(new PrototypeGenerator.DynamicClassLoader());
+
     @org.junit.Test
     public void testConstructFromBase() throws Throwable {
         Prototype base = new Prototype(null);
 
-        Prototype withFoo = PrototypeGenerator.construct(base, "foo");
+        Prototype withFoo = prototypeGenerator.construct(base, "foo");
 
         assertArrayEquals("withFoo fields were not ['foo']", new String[]{"foo"}, withFoo.properties());
 
@@ -30,7 +33,7 @@ public class PrototypeGeneratorTest {
 
     @org.junit.Test
     public void testConstructFromKeyValue() throws Throwable {
-        Prototype withFoo = PrototypeGenerator.construct("foo", "blah");
+        Prototype withFoo = prototypeGenerator.construct("foo", "blah");
 
         assertArrayEquals("withFoo fields were not ['foo']", new String[]{"foo"}, withFoo.properties());
 
@@ -45,7 +48,7 @@ public class PrototypeGeneratorTest {
 
     @org.junit.Test
     public void testConstructFromKey2Value2() throws Throwable {
-        Prototype withFooQuux = PrototypeGenerator.construct("foo", "quux", "blah", "yummy");
+        Prototype withFooQuux = prototypeGenerator.construct("foo", "quux", "blah", "yummy");
 
         assertArrayEquals("withFoo fields were not ['foo', 'quux']", new String[]{"foo", "quux"}, withFooQuux.properties());
 
@@ -64,7 +67,7 @@ public class PrototypeGeneratorTest {
 
     @org.junit.Test
     public void testConstructFromKey3Value3() throws Throwable {
-        Prototype withFooQuuxZaj = PrototypeGenerator.construct("foo", "quux", "zaj", "blah", "yummy", "piff");
+        Prototype withFooQuuxZaj = prototypeGenerator.construct("foo", "quux", "zaj", "blah", "yummy", "piff");
 
         assertArrayEquals("withFoo fields were not ['foo', 'quux', 'zaj']", new String[]{"foo", "quux", "zaj"}, withFooQuuxZaj.properties());
 
@@ -87,7 +90,7 @@ public class PrototypeGeneratorTest {
 
     @org.junit.Test
     public void testConstructFromKeyAryValueAry() throws Throwable {
-        Prototype withFooQuuxZaj = PrototypeGenerator.construct(new String[] {"foo", "quux", "zaj"}, new Object[] {"blah", "yummy", "piff"});
+        Prototype withFooQuuxZaj = prototypeGenerator.construct(new String[]{"foo", "quux", "zaj"}, new Object[]{"blah", "yummy", "piff"});
 
         assertArrayEquals("withFoo fields were not ['foo', 'quux', 'zaj']", new String[]{"foo", "quux", "zaj"}, withFooQuuxZaj.properties());
 
