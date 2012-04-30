@@ -14,7 +14,7 @@ import java.util.Set;
 import static me.qmx.jitescript.util.CodegenUtils.*;
 
 public class PrototypeGenerator {
-    private static final Cache<String, Class> prototypes = CacheBuilder.newBuilder().weakValues().build();
+    private final Cache<String, Class> prototypes = CacheBuilder.newBuilder().weakValues().build();
     private static final MessageDigest SHA1;
     private final ClassLoader parentClassLoader;
 
