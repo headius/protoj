@@ -16,6 +16,11 @@ import static me.qmx.jitescript.util.CodegenUtils.*;
 public class PrototypeGenerator {
     private static final Cache<String, Class> prototypes = CacheBuilder.newBuilder().weakValues().build();
     private static final MessageDigest SHA1;
+    private final ClassLoader parentClassLoader;
+
+    public PrototypeGenerator(ClassLoader parentClassLoader) {
+        this.parentClassLoader = parentClassLoader;
+    }
 
     static {
         MessageDigest sha1 = null;
@@ -35,11 +40,11 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Class generate(String... baseProps) {
+    public Class generate(String... baseProps) {
         return generate(new String[0], baseProps);
     }
 
-    public static Class generate(String[] baseProps, final String... modifications) {
+    public Class generate(String[] baseProps, final String... modifications) {
         String[] newProps;
         if (baseProps.length == 0) {
             if (modifications.length == 0) {
@@ -154,7 +159,7 @@ public class PrototypeGenerator {
                     }
                 }};
 
-                p = new DynamicClassLoader().define(jiteClass);
+                p = new DynamicClassLoader(this.parentClassLoader).define(jiteClass);
                 prototypes.put(hash, p);
             }
 
@@ -164,7 +169,7 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Prototype construct(String[] keys, Object[] values) {
+    public Prototype construct(String[] keys, Object[] values) {
         try {
             Class p = generate(keys);
             return (Prototype) p.getConstructor(Object[].class).newInstance((Object) values);
@@ -173,7 +178,7 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Prototype construct(Prototype base, String... modifications) {
+    public Prototype construct(Prototype base, String... modifications) {
         try {
             Class p = generate(base.properties(), modifications);
             return (Prototype) p.getConstructor(params(base.getClass())).newInstance(base);
@@ -182,7 +187,7 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Prototype construct(String key0, Object value0) {
+    public Prototype construct(String key0, Object value0) {
         try {
             Class p = protoClassFromProps(key0);
             return (Prototype) p.getConstructor(params(Object.class, 1)).newInstance(value0);
@@ -191,7 +196,7 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Prototype construct(String key0, String key1, Object value0, Object value1) {
+    public Prototype construct(String key0, String key1, Object value0, Object value1) {
         try {
             Class p = generate(key0, key1);
             return (Prototype) p.getConstructor(params(Object.class, 2)).newInstance(value0, value1);
@@ -200,7 +205,7 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Prototype construct(String key0, String key1, String key2, Object value0, Object value1, Object value2) {
+    public Prototype construct(String key0, String key1, String key2, Object value0, Object value1, Object value2) {
         try {
             Class p = generate(key0, key1, key2);
             return (Prototype) p.getConstructor(params(Object.class, 3)).newInstance(value0, value1, value2);
@@ -209,12 +214,12 @@ public class PrototypeGenerator {
         }
     }
 
-    public static Class protoClassFromProps(String... newProps) {
+    public Class protoClassFromProps(String... newProps) {
         final String hash = hashFromStrings(newProps);
         return prototypes.getIfPresent(hash);
     }
 
-    public static String hashFromStrings(String... strings) {
+    public String hashFromStrings(String... strings) {
         MessageDigest sha1 = sha1();
         sha1.update(Arrays.toString(strings).getBytes());
         byte[] digest = sha1.digest();
@@ -226,6 +231,14 @@ public class PrototypeGenerator {
     }
 
     public static class DynamicClassLoader extends ClassLoader {
+
+        public DynamicClassLoader() {
+        }
+
+        public DynamicClassLoader(ClassLoader parent) {
+            super(parent);
+        }
+
         public Class<?> define(JiteClass jiteClass) {
             byte[] classBytes = jiteClass.toBytes();
             return super.defineClass(jiteClass.getClassName(), classBytes, 0, classBytes.length);
