@@ -41,10 +41,10 @@ public class PrototypeGenerator {
     }
 
     public Class generate(String... baseProps) {
-        return generate(new String[0], baseProps);
+        return generate(null, new String[0], baseProps);
     }
 
-    public Class generate(String[] baseProps, final String... modifications) {
+    public Class generate(Prototype prototype, String[] baseProps, final String... modifications) {
         String[] newProps;
         if (baseProps.length == 0) {
             if (modifications.length == 0) {
@@ -159,7 +159,7 @@ public class PrototypeGenerator {
                     }
                 }};
 
-                p = new DynamicClassLoader(this.parentClassLoader).define(jiteClass);
+                p = defineClass(prototype, jiteClass);
                 prototypes.put(hash, p);
             }
 
@@ -167,6 +167,16 @@ public class PrototypeGenerator {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Class defineClass(Prototype prototype, JiteClass jiteClass) {
+        Class p;
+        if (prototype != null) {
+            p = new DynamicClassLoader(prototype.getClass().getClassLoader()).define(jiteClass);
+        } else {
+            p = new DynamicClassLoader(this.parentClassLoader).define(jiteClass);
+        }
+        return p;
     }
 
     public Prototype construct(String[] keys, Object[] values) {
@@ -180,7 +190,7 @@ public class PrototypeGenerator {
 
     public Prototype construct(Prototype base, String... modifications) {
         try {
-            Class p = generate(base.properties(), modifications);
+            Class p = generate(base, base.properties(), modifications);
             return (Prototype) p.getConstructor(params(base.getClass())).newInstance(base);
         } catch (Exception e) {
             throw new RuntimeException(e);

@@ -1,5 +1,7 @@
 package com.headius.protoj;
 
+import org.junit.Test;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
@@ -109,5 +111,17 @@ public class PrototypeGeneratorTest {
         assertEquals("prototype construct did not set foo 'blah'", "blah", fooGetter.invokeWithArguments(withFooQuuxZaj));
         assertEquals("prototype construct did not set quux 'yummy'", "yummy", quuxGetter.invokeWithArguments(withFooQuuxZaj));
         assertEquals("prototype construct did not set zaj 'piff'", "piff", zajGetter.invokeWithArguments(withFooQuuxZaj));
+    }
+
+    @Test
+    public void testPrototypalInheritance() throws Throwable, IllegalAccessException {
+        final Prototype prototype = prototypeGenerator.construct(new Prototype(null), "test", "lol");
+        final Field prototypeTest = prototype.getClass().getDeclaredField("test");
+        final MethodHandle testSetter = MethodHandles.lookup().unreflectSetter(prototypeTest);
+        testSetter.invokeWithArguments(prototype, "prototypeValue");
+        final Prototype child = prototypeGenerator.construct(prototype, "test2", "test3");
+        final Field test = child.getClass().getField("test");
+        final MethodHandle testGetter = MethodHandles.lookup().unreflectGetter(test);
+        assertEquals("prototype construct did not set test 'prototypeValue'", "prototypeValue", testGetter.invokeWithArguments(child));
     }
 }
